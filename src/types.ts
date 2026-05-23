@@ -33,6 +33,7 @@ export interface Stats {
   monthlySaved: number;
   cancelledCount: number;
   currency: Currency;
+  categoryBreakdown: Record<Category, number>;
 }
 
 export const CURRENCIES: Currency[] = ["GBP", "USD", "EUR", "AUD", "CAD"];

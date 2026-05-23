@@ -118,6 +118,61 @@ export function Dashboard({ stats, hasAny, onAdd }: Props) {
           </p>
         </div>
       )}
+
+      <CategoryBreakdown stats={stats} />
+    </div>
+  );
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  Entertainment: "#f97316",
+  Software: "#3b82f6",
+  Cloud: "#8b5cf6",
+  Utilities: "#eab308",
+  Finance: "#22c55e",
+  Health: "#ef4444",
+  Education: "#06b6d4",
+  Other: "#6b7280",
+};
+
+function CategoryBreakdown({ stats }: { stats: Stats }) {
+  const entries = Object.entries(stats.categoryBreakdown)
+    .filter(([, v]) => v > 0)
+    .sort(([, a], [, b]) => b - a);
+
+  if (entries.length === 0) return null;
+
+  const max = entries[0][1];
+
+  return (
+    <div className="rounded-xl border border-border bg-surface p-4">
+      <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
+        By category
+      </h3>
+      <div className="space-y-2.5">
+        {entries.map(([cat, amount]) => {
+          const pct = Math.round((amount / stats.monthly) * 100);
+          const width = Math.max((amount / max) * 100, 4);
+          return (
+            <div key={cat} className="flex items-center gap-2.5 text-sm">
+              <span className="w-20 truncate text-foreground">{cat}</span>
+              <div className="flex-1 h-2 rounded-full bg-background overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${width}%`,
+                    backgroundColor: CATEGORY_COLORS[cat] || "#6b7280",
+                  }}
+                />
+              </div>
+              <span className="w-20 text-right tabular-nums text-muted-foreground">
+                {fmt(amount, stats.currency)}
+                <span className="ml-1 text-xs opacity-60">{pct}%</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -161,6 +161,13 @@ export async function getStats(): Promise<Stats> {
     0,
   );
   const currency: Currency = (active[0]?.currency ?? "GBP") as Currency;
+  const categoryBreakdown: Record<Category, number> = {
+    Entertainment: 0, Software: 0, Cloud: 0, Utilities: 0,
+    Finance: 0, Health: 0, Education: 0, Other: 0,
+  };
+  for (const s of active) {
+    categoryBreakdown[s.category] += monthlyEquivalent(s);
+  }
   return {
     monthly,
     yearly: monthly * 12,
@@ -169,6 +176,7 @@ export async function getStats(): Promise<Stats> {
     monthlySaved,
     cancelledCount: cancelled.length,
     currency,
+    categoryBreakdown,
   };
 }
 
