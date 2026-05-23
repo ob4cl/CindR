@@ -22,7 +22,7 @@ jobs:
         run: npm ci
 
       - name: Build frontend
-        run: npm run build
+        run: npm run build:spa
 
       - name: Build Tauri .exe
         uses: tauri-apps/tauri-action@v0

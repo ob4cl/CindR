@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "identifier": "dev.ob4cl.cindr",
   "build": {
-    "frontendDist": "../dist/client",
+    "frontendDist": "../dist-spa",
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeBuildCommand": "npm run build:spa"
   },
   "app": {
     "title": "CindR",
