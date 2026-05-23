@@ -68,8 +68,8 @@ CindR is a privacy-first subscription tracker that lives entirely in your browse
 
 ```bash
 # Clone
-git clone https://github.com/ob4cl/subscription-insight.git
-cd subscription-insight
+git clone https://github.com/ob4cl/CindR.git
+cd CindR
 
 # Install
 npm install
@@ -138,7 +138,8 @@ CindR is built as a tri-platform app from a single codebase:
 |----------|---------|--------|
 | **Web** | `npm run deploy:web` | Netlify SPA |
 | **Desktop** | `npm run deploy:desktop` | Windows `.exe` (Tauri) |
-| **Mobile** | `npm run deploy:mobile` | iOS / Android (Capacitor) |
+| **Android** | `npm run deploy:android` | APK via Android Studio |
+| **iOS** | `npm run deploy:mobile` | Xcode project |
 
 ---
 

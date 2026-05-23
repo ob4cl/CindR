@@ -14,10 +14,12 @@
     "deploy:web": "netlify deploy --prod --dir=dist/client",
     "deploy:web:draft": "netlify deploy --dir=dist/client",
     "deploy:desktop": "npx tauri build",
-    "deploy:mobile": "npx cap sync && echo 'Then: cd android && ./gradlew assembleDebug or open ios/App in Xcode'",
+    "deploy:mobile": "npm run build:spa && npx cap sync",
+    "deploy:android": "npm run build:spa && npx cap sync android && echo 'Open android/ in Android Studio to build APK'",
     "tauri": "npx tauri"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.4",
     "@capacitor/cli": "^8.3.4",
     "@capacitor/core": "^8.3.4",
     "@cloudflare/vite-plugin": "^1.25.5",
