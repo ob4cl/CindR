@@ -84,14 +84,19 @@ export function SubscriptionList({
         </div>
       ) : (
         <div className="space-y-2.5">
-          {visible.map((s) => (
-            <SubscriptionCard
+          {visible.map((s, i) => (
+            <div
               key={s.id}
-              sub={s}
-              onEdit={onEdit}
-              onCancel={onCancel}
-              onDelete={onDelete}
-            />
+              className="stagger-item card-glow rounded-xl"
+              style={{ animationDelay: `${i * 60}ms` }}
+            >
+              <SubscriptionCard
+                sub={s}
+                onEdit={onEdit}
+                onCancel={onCancel}
+                onDelete={onDelete}
+              />
+            </div>
           ))}
         </div>
       )}
