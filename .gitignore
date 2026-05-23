@@ -20,6 +20,18 @@ dist-ssr
 .wrangler/
 .dev.vars
 
+# Tauri
+src-tauri/target/
+src-tauri/gen/
+
+# Capacitor
+ios/
+android/
+.capacitor/
+
+# Netlify
+.netlify/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

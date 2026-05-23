@@ -1,0 +1,74 @@
+name: Build Mobile App
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web
+        run: npm run build
+
+      - name: Setup Capacitor
+        run: npx cap sync android
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Build Android APK
+        run: cd android && ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: cindr-android-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web
+        run: npm run build
+
+      - name: Setup Capacitor
+        run: npx cap sync ios
+
+      - name: Build iOS
+        run: |
+          cd ios/App
+          xcodebuild -workspace App.xcworkspace \
+            -scheme App \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath $PWD/build/App.xcarchive \
+            archive
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: cindr-ios-archive
+          path: ios/App/build/App.xcarchive

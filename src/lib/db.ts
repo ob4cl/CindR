@@ -1,14 +1,66 @@
 import type { Subscription, Stats, Currency } from "@/types";
 
 /**
- * Placeholder data layer for CindR.
+ * IndexedDB-backed data layer for CindR.
  *
- * In the real app this is backed by IndexedDB. For now an in-memory
- * Map keeps the UI shell functional. Swap this module for the real
- * IndexedDB-backed implementation without changing the call sites.
+ * Replaces the in-memory placeholder. Same public API so no
+ * component or hook changes are needed. Data persists across
+ * sessions and never leaves the browser.
+ *
+ * Privacy: zero network requests. Export uses Blob download.
  */
 
-const store = new Map<string, Subscription>();
+const DB_NAME = "cindr";
+const DB_VERSION = 1;
+const STORE = "subscriptions";
+
+/* ------------------------------------------------------------------ */
+/*  IndexedDB helpers                                                  */
+/* ------------------------------------------------------------------ */
+
+function openDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE)) {
+        const os = db.createObjectStore(STORE, { keyPath: "id" });
+        os.createIndex("nextRenewal", "nextRenewal");
+        os.createIndex("cancelled", "cancelled");
+        os.createIndex("category", "category");
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () =>
+      reject(new Error(`IndexedDB open failed: ${req.error?.message}`));
+  });
+}
+
+function tx(
+  mode: IDBTransactionMode,
+  fn: (store: IDBObjectStore) => IDBRequest,
+): Promise<any> {
+  return new Promise((resolve, reject) => {
+    openDB()
+      .then((db) => {
+        const t = db.transaction(STORE, mode);
+        const store = t.objectStore(STORE);
+        t.oncomplete = () => resolve(undefined);
+        t.onerror = () =>
+          reject(new Error(`Transaction failed: ${t.error?.message}`));
+        const req = fn(store);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () =>
+          reject(new Error(`Request failed: ${req.error?.message}`));
+      })
+      .catch(reject);
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/*  Reactivity (pub/sub — same contract as the in-memory version)      */
+/* ------------------------------------------------------------------ */
+
 let listeners = new Set<() => void>();
 
 function notify() {
@@ -17,11 +69,18 @@ function notify() {
 
 export function subscribe(cb: () => void): () => void {
   listeners.add(cb);
-  return () => listeners.delete(cb);
+  return () => {
+    listeners.delete(cb);
+  };
 }
 
+/* ------------------------------------------------------------------ */
+/*  CRUD                                                               */
+/* ------------------------------------------------------------------ */
+
 export async function listSubscriptions(): Promise<Subscription[]> {
-  return Array.from(store.values()).sort(
+  const subs: Subscription[] = await tx("readonly", (s) => s.getAll());
+  return subs.sort(
     (a, b) => +new Date(a.nextRenewal) - +new Date(b.nextRenewal),
   );
 }
@@ -35,7 +94,7 @@ export async function addSubscription(
     cancelled: false,
     createdAt: new Date().toISOString(),
   };
-  store.set(sub.id, sub);
+  await tx("readwrite", (s) => s.add(sub));
   notify();
   return sub;
 }
@@ -44,9 +103,11 @@ export async function updateSubscription(
   id: string,
   patch: Partial<Subscription>,
 ): Promise<void> {
-  const existing = store.get(id);
+  const existing: Subscription | undefined = await tx("readonly", (s) =>
+    s.get(id),
+  );
   if (!existing) return;
-  store.set(id, { ...existing, ...patch });
+  await tx("readwrite", (s) => s.put({ ...existing, ...patch }));
   notify();
 }
 
@@ -58,11 +119,16 @@ export async function cancelSubscription(id: string): Promise<void> {
 }
 
 export async function deleteSubscription(id: string): Promise<void> {
-  store.delete(id);
+  await tx("readwrite", (s) => s.delete(id));
   notify();
 }
 
+/* ------------------------------------------------------------------ */
+/*  Stats                                                              */
+/* ------------------------------------------------------------------ */
+
 function monthlyEquivalent(s: Subscription): number {
+  if (s.cancelled) return 0;
   switch (s.billingCycle) {
     case "monthly":
       return s.amount;
@@ -80,7 +146,7 @@ function monthlyEquivalent(s: Subscription): number {
 }
 
 export async function getStats(): Promise<Stats> {
-  const subs = Array.from(store.values());
+  const subs = await listSubscriptions();
   const active = subs.filter((s) => !s.cancelled);
   const cancelled = subs.filter((s) => s.cancelled);
   const monthly = active.reduce((sum, s) => sum + monthlyEquivalent(s), 0);
@@ -104,4 +170,45 @@ export async function getStats(): Promise<Stats> {
     cancelledCount: cancelled.length,
     currency,
   };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Export / Import                                                    */
+/* ------------------------------------------------------------------ */
+
+export async function exportData(): Promise<string> {
+  const subs = await listSubscriptions();
+  return JSON.stringify(
+    { version: 1, exportedAt: new Date().toISOString(), subscriptions: subs },
+    null,
+    2,
+  );
+}
+
+export async function importData(json: string): Promise<number> {
+  let data: { subscriptions: Subscription[] };
+  try {
+    data = JSON.parse(json);
+  } catch {
+    throw new Error("Invalid JSON format");
+  }
+
+  if (!data.subscriptions || !Array.isArray(data.subscriptions)) {
+    throw new Error('Invalid format: expected { "subscriptions": [...] }');
+  }
+
+  let imported = 0;
+  for (const sub of data.subscriptions) {
+    if (sub.id && sub.name && typeof sub.amount === "number") {
+      const existing: Subscription | undefined = await tx("readonly", (s) =>
+        s.get(sub.id),
+      );
+      if (!existing) {
+        await tx("readwrite", (s) => s.add(sub));
+        imported++;
+      }
+    }
+  }
+  notify();
+  return imported;
 }
