@@ -10,7 +10,6 @@
     "beforeBuildCommand": "npm run build:spa"
   },
   "app": {
-    "title": "CindR",
     "windows": [
       {
         "title": "CindR — Burn through subscriptions, not cash.",
@@ -29,27 +28,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ],
     "windows": {
       "wix": {
         "language": "en-US"
-      }
-    }
-  },
-  "plugins": {
-    "updater": {
-      "endpoints": [
-        "https://github.com/ob4cl/subscription-insight/releases/latest/download/latest.json"
-      ],
-      "pubkey": "REPLACE_WITH_PUBKEY",
-      "windows": {
-        "installMode": "passive"
       }
     }
   }
